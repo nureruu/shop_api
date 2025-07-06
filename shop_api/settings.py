@@ -92,8 +92,12 @@ WSGI_APPLICATION = 'shop_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'postgres'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
+        'HOST': os.environ.get('DB_HOST', 'db'), 
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -141,14 +145,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": os.environ.get("REDIS_URL"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     }
 }
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/2"
-CELERY_DEFAULT_BACKEND = "redis://127.0.0.1:6379/2"
+CELERY_BROKER_URL = os.environ.get("CELERT_BROKER_URL")
+CELERY_DEFAULT_BACKEND = os.environ.get("CELERY_DEFAULT_BACKEND")
 
 # 'DEFAULT_PERMISSION_CLASSES' : [
 #     'rest_framework.permissions.Allow'

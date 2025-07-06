@@ -1,33 +1,68 @@
 version: '3.8'
-
 services:
-  db:
-    image: postgres:15
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=yourpassword
-      - POSTGRES_DB=shopdb
-    ports:
-      - "5432:5432"
-
   web:
-    build: .
+    build:
+      context: .
     command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DB_NAME=shopdb
-      - DB_USER=postgres
-      - DB_PASSWORD=yourpassword
-      - DB_HOST=db
-      - DB_PORT=5432
-      - SECRET_KEY=your_secret_key
+    ports: 
+      - "7001:8000"
     depends_on:
       - db
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+
+  celery:
+    build:
+      context: .
+    command: celery -A shop_api worker --loglevel=info
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+
+  celery_beat:
+    build:
+      context: .
+    command: celery -A shop_api beat --loglevel=info
+    depends_on: 
+      - redis
+    env_file:
+      - .env
+    volumes: 
+      - .:/app
+
+  flower:
+    build:
+      context: .
+    command: celery -A shop_api flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on: 
+      - redis
+      - celery
+    env_file:
+      - .env
+    volumes:
+      - .:/app
 
 volumes:
-  postgres_data:
+  db_data:
+  redis_data:
+
