@@ -1,9 +1,10 @@
 from rest_framework import serializers
-# from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError
 from .models import ConfirmationCode
 from users.models import CustomUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
+from djoser.serializers import UserSerializer as BaseUserSerializer
 
 class UserBaseSerializer(serializers.Serializer):
     email = serializers.CharField(max_length=150)
@@ -57,3 +58,14 @@ class CustomTokenObtainSerializer(TokenObtainPairSerializer):
 
 class GoogleLoginSerializer(serializers.Serializer):
     code = serializers.CharField(required=True)
+
+class CustomUserCreateSerializer(BaseUserCreateSerializer):
+    class Meta(BaseUserCreateSerializer.Meta):
+        model = CustomUser
+        fields = ('email', 'password', 'phone')
+        extra_kwargs = {'password': {'write_only': True}}
+
+class CustomUserSerializer(BaseUserSerializer):
+    class Meta(BaseUserSerializer.Meta):
+        model = CustomUser
+        fields = ('email', 'phone')
