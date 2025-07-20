@@ -1,29 +1,22 @@
 from django.urls import path
-from .views import RegisterView, ConfirmCodeView, CustomTokenView, ConfirmView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework.authtoken.views import obtain_auth_token
-from users .oauth import GoogleLoginView
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
-from rest_framework import permissions
-schema_view = get_schema_view(
-    openapi.Info(
-        title="Shop API",
-        default_version='v1',
-        description="Документация API",
-    ),
-    public=True,
-    permission_classes=[permissions.AllowAny],
+from users.views import RegistrationAPIView, AuthorizationAPIView, ConfirmUserAPIView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView
 )
+from users.views import CustomTokenObtainPairView
+from users.oauth import GoogleLoginAPIView
+
+
 urlpatterns = [
-    path('register/', RegisterView.as_view()),
-    path('confirm/', ConfirmCodeView.as_view()),
-    path('login/', CustomTokenView.as_view()),
-    path('refresh/', TokenRefreshView.as_view()),
-    path('api/v1/auth-token/', obtain_auth_token, name='api_token_auth'),
-    path('google-login/', GoogleLoginView.as_view()),
-    path("register/", RegisterView.as_view()),
-    path("confirm/", ConfirmView.as_view()),
-    path("swagger/", schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    
+    path('registration/', RegistrationAPIView.as_view()),
+    path('authorization/', AuthorizationAPIView.as_view()),
+    path('confirm/', ConfirmUserAPIView.as_view()),
+
+    path('jwt-token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('jwt-token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('jwt-token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+
+    path('google-login/', GoogleLoginAPIView.as_view()),
 ]
