@@ -2,11 +2,20 @@ from collections import OrderedDict
 from django.db import transaction
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from django.core.cache import cache
+from .permissions import ModeratorProductPermission
+from .models import Product
+from .serializers import ProductSerializer
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [ModeratorProductPermission]
+
 
 from .models import Category, Product, Review
 from .serializers import (
