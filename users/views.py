@@ -8,13 +8,13 @@ from rest_framework.authtoken.models import Token
 from rest_framework.generics import CreateAPIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from users.serializers import CustomTokenObtainSerializer
+from django.core.cache import cache
 
 from .serializers import (
     RegisterValidateSerializer,
     AuthValidateSerializer,
     ConfirmationSerializer
 )
-from .models import ConfirmationCode
 import random
 import string
 from users.models import CustomUser
@@ -53,7 +53,6 @@ class RegistrationAPIView(CreateAPIView):
         email = serializer.validated_data['email']
         password = serializer.validated_data['password']
 
-        # Use transaction to ensure data consistency
         with transaction.atomic():
             user = CustomUser.objects.create_user(
                 email=email,
@@ -61,39 +60,47 @@ class RegistrationAPIView(CreateAPIView):
                 is_active=False
             )
 
-            # Create a random 6-digit code
+            # Генерируем 6-значный код
             code = ''.join(random.choices(string.digits, k=6))
 
-            confirmation_code = ConfirmationCode.objects.create(
-                user=user,
-                code=code
-            )
+            # Ключ Redis: confirm:<user_id>
+            key = f'confirm:{user.id}'
+
+            # Удаляем старый, если есть
+            cache.delete(key)
+
+            # Сохраняем новый код на 5 минут
+            cache.set(key, code, timeout=300)  # 5 минут = 300 сек
 
         return Response(
             status=status.HTTP_201_CREATED,
             data={
                 'user_id': user.id,
-                'confirmation_code': code
+                'confirmation_code': code  # ⚠️ Только для отладки. В реальности надо отправлять email.
             }
         )
 
 
+
 class ConfirmUserAPIView(CreateAPIView):
     serializer_class = ConfirmationSerializer
+
     def post(self, request):
         serializer = ConfirmationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user_id = serializer.validated_data['user_id']
+        user = CustomUser.objects.get(id=user_id)
 
         with transaction.atomic():
-            user = CustomUser.objects.get(id=user_id)
             user.is_active = True
             user.save()
 
-            token, _ = Token.objects.get_or_create(user=user)
+            # Удаляем использованный код из Redis
+            cache.delete(f'confirm:{user.id}')
 
-            ConfirmationCode.objects.filter(user=user).delete()
+            # Создаём токен
+            token, _ = Token.objects.get_or_create(user=user)
 
         return Response(
             status=status.HTTP_200_OK,
@@ -102,6 +109,7 @@ class ConfirmUserAPIView(CreateAPIView):
                 'key': token.key
             }
         )
+
     
 
 class CustomTokenObtainPairView(TokenObtainPairView):
