@@ -5,7 +5,7 @@ from users.models import CustomUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from djoser.serializers import UserSerializer as BaseUserSerializer
-
+from django.contrib.auth import authenticate
 class UserBaseSerializer(serializers.Serializer):
     email = serializers.CharField(max_length=150)
     password = serializers.CharField()
@@ -55,8 +55,20 @@ class CustomTokenObtainSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         token['birthday'] = str(user.birthday) if user.birthday else None
         return token
-    
+    def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
 
+        user = authenticate(request=self.context.get("request"), email=email, password=password)
+
+        if not user:
+            raise ValidationError("Неверный email или пароль")
+
+        if not user.is_active:
+            raise ValidationError("Аккаунт не активирован")
+
+        data = super().validate(attrs)
+        return data
 class GoogleLoginSerializer(serializers.Serializer):
     code = serializers.CharField(required=True)
 

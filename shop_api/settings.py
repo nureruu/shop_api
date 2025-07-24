@@ -199,3 +199,6 @@ DJOSER = {
         'current_user': 'users.serializers.CustomUserSerializer',
     },
 }
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailBackend', 
+]

@@ -9,6 +9,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=50, null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     birthday = models.DateField(null=True, blank=True)
+    avatar = models.URLField(blank=True, null=True)
+
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
