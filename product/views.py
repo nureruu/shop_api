@@ -3,6 +3,8 @@ from django.db import transaction
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError
+from datetime import date
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
@@ -15,7 +17,20 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [ModeratorProductPermission]
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not user.birthday:
+            raise ValidationError("Дата рождения обязательна для создания продукта.")
 
+        today = date.today()
+        age = today.year - user.birthday.year - (
+            (today.month, today.day) < (user.birthday.month, user.birthday.day)
+        )
+
+        if age < 18:
+            raise ValidationError("Вам должно быть 18 лет, чтобы создать продукт.")
+
+        serializer.save(owner=user)
 
 from .models import Category, Product, Review
 from .serializers import (
