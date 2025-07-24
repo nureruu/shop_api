@@ -17,20 +17,6 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [ModeratorProductPermission]
-    def perform_create(self, serializer):
-        user = self.request.user
-        if not user.birthday:
-            raise ValidationError("Дата рождения обязательна для создания продукта.")
-
-        today = date.today()
-        age = today.year - user.birthday.year - (
-            (today.month, today.day) < (user.birthday.month, user.birthday.day)
-        )
-
-        if age < 18:
-            raise ValidationError("Вам должно быть 18 лет, чтобы создать продукт.")
-
-        serializer.save(owner=user)
 
 from .models import Category, Product, Review
 from .serializers import (
@@ -107,31 +93,40 @@ class ProductListCreateAPIView(ListCreateAPIView):
             cache.set("product_list", response.data, timeout=120)
         return response
 
-    def post(self, request, *args, **kwargs):
-        email = request.auth.get('email')
-        print(email, "2"*10)
+def post(self, request, *args, **kwargs):
+    user = request.user
+    if not user.birthday:
+        raise ValidationError("Дата рождения обязательна для создания продукта.")
 
+    today = date.today()
+    age = today.year - user.birthday.year - (
+        (today.month, today.day) < (user.birthday.month, user.birthday.day)
+    )
 
-        serializer = ProductValidateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    if age < 18:
+        raise ValidationError("Вам должно быть 18 лет, чтобы создать продукт.")
 
-        # Get validated data
-        title = serializer.validated_data.get('title')
-        description = serializer.validated_data.get('description')
-        price = serializer.validated_data.get('price')
-        category = serializer.validated_data.get('category')
+    serializer = ProductValidateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
 
-        # Create product
-        product = Product.objects.create(
-            title=title,
-            description=description,
-            price=price,
-            category=category,
-            owner=request.user
-        )
+    # Get validated data
+    title = serializer.validated_data.get('title')
+    description = serializer.validated_data.get('description')
+    price = serializer.validated_data.get('price')
+    category = serializer.validated_data.get('category')
 
-        return Response(data=ProductSerializer(product).data,
-                        status=status.HTTP_201_CREATED)
+    # Create product
+    product = Product.objects.create(
+        title=title,
+        description=description,
+        price=price,
+        category=category,
+        owner=request.user
+    )
+
+    return Response(data=ProductSerializer(product).data,
+                    status=status.HTTP_201_CREATED)
+
 
 
 class ProductDetailAPIView(RetrieveUpdateDestroyAPIView):
